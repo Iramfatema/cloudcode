@@ -45,14 +45,43 @@
     - name: Update apt package cache after adding Docker repo
       apt:
         update_cache: yes
-
+        
     - name: Install Docker
       apt:
         name: docker-ce
         state: present
-
+    
     - name: Ensure Docker service is running
       systemd:
         name: docker
         state: started
-        enabled: yes
+        enabled: yes
+        
+    - name: Deploy Docker Container
+      hosts: localhost
+      become: true
+
+      vars:
+        docker_image: nitinnema/classarr:1.0.1
+        container_name: classarr
+        host_port: 3000
+
+      tasks:
+        - name: Pull Docker Image
+          docker_image:
+            name: "{{ docker_image }}"
+            state: present
+
+        - name: Run Docker Container
+          docker_container:
+            name: "{{ container_name }}"
+            image: "{{ docker_image }}"
+            state: started
+            ports:
+              - "{{ host_port }}:3000"
+
+        - name: Wait for the container to be reachable
+          wait_for:
+            host: "http://localhost:{{ host_port }}"
+            state: started
+            timeout: 60
